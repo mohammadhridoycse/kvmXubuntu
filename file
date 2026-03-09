@@ -1,0 +1,446 @@
+# KVM Virtualization Deployment & Configuration Guide
+
+**Author:** Hridoy
+**Platform:** Ubuntu Server 22.04 LTS
+**Virtualization Stack:** KVM + QEMU + libvirt
+**Management Tools:** Cockpit, virt-manager
+**Remote Access:** SSH via MobaXterm (X11 Forwarding)
+
+---
+
+# Overview
+
+This repository documents the **deployment and configuration of a KVM-based virtualization environment** running on **Ubuntu Server 22.04 LTS**.
+
+The goal of this project is to build a **Linux-based virtualization host** capable of running multiple virtual machines and managing them remotely using both:
+
+* **Cockpit Web Interface**
+* **virt-manager GUI**
+
+The environment is managed remotely through **SSH using MobaXterm with X11 forwarding**, allowing GUI tools to run from a headless server.
+
+This project demonstrates how KVM can be deployed as a **powerful open-source alternative to traditional hypervisors**.
+
+---
+
+# Virtualization Platforms Previously Used
+
+Prior experience includes working with:
+
+* VirtualBox
+* Hyper-V
+* VMware Workstation
+* VMware ESXi
+* Nutanix
+* Proxmox
+
+This project focuses on deploying **native KVM virtualization** directly on Linux.
+
+---
+
+# Virtualization Stack Architecture
+
+```
+Hardware
+   │
+Linux Kernel (KVM Module)
+   │
+QEMU Hypervisor
+   │
+libvirt Virtualization API
+   │
+Management Tools
+ ├─ Cockpit
+ └─ virt-manager
+```
+
+---
+
+# Infrastructure Architecture
+
+```
+Windows Laptop
+      │
+      │ MobaXterm (X11 Server)
+      │
+SSH Connection
+      │
+Ubuntu 22.04 KVM Host
+      │
+libvirt Virtual Network
+      │
+Virtual Machines
+ ├─ Ubuntu VM
+ └─ Windows Server VM
+```
+
+The KVM host runs without a graphical interface and is managed remotely.
+
+---
+
+# System Preparation
+
+Update system packages:
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+Install virtualization capability checker:
+
+```bash
+sudo apt install cpu-checker
+```
+
+Verify CPU virtualization support:
+
+```bash
+kvm-ok
+```
+
+Expected output:
+
+```
+INFO: /dev/kvm exists
+KVM acceleration can be used
+```
+
+---
+
+# Installing KVM Virtualization Stack
+
+Install the required KVM packages:
+
+```bash
+sudo apt install qemu-kvm \
+libvirt-daemon-system \
+libvirt-clients \
+bridge-utils \
+virtinst \
+virt-viewer -y
+```
+
+### Package Description
+
+| Package               | Purpose                          |
+| --------------------- | -------------------------------- |
+| qemu-kvm              | Virtual machine execution engine |
+| libvirt-daemon-system | Virtualization daemon            |
+| libvirt-clients       | CLI virtualization tools         |
+| bridge-utils          | Network bridge utilities         |
+| virtinst              | VM installation tools            |
+| virt-viewer           | VM graphical console viewer      |
+
+---
+
+# Verifying KVM Kernel Modules
+
+Check if KVM modules are loaded:
+
+```bash
+lsmod | grep kvm
+```
+
+Intel CPU example:
+
+```
+kvm_intel
+kvm
+```
+
+AMD CPU example:
+
+```
+kvm_amd
+kvm
+```
+
+---
+
+# Enable libvirt Service
+
+Start and enable the virtualization service:
+
+```bash
+sudo systemctl enable --now libvirtd
+```
+
+Verify service status:
+
+```bash
+sudo systemctl status libvirtd
+```
+
+Expected state:
+
+```
+active (running)
+```
+
+---
+
+# Configure User Permissions
+
+Add the current user to the libvirt group:
+
+```bash
+sudo usermod -aG libvirt $USER
+```
+
+Apply changes:
+
+```bash
+newgrp libvirt
+```
+
+Verify access:
+
+```bash
+virsh list --all
+```
+
+---
+
+# Install Cockpit Web Interface
+
+Cockpit provides a browser-based management interface for virtualization.
+
+Install cockpit:
+
+```bash
+sudo apt install cockpit cockpit-machines
+```
+
+Enable cockpit service:
+
+```bash
+sudo systemctl enable --now cockpit
+```
+
+Access cockpit in browser:
+
+```
+https://SERVER-IP:9090
+```
+
+### Cockpit Features
+
+* Create and manage virtual machines
+* Start and stop VMs
+* Resource monitoring
+* Storage overview
+* Network status
+
+---
+
+# Virtual Machines Deployed
+
+The following virtual machines are running in this environment:
+
+| VM Name   | OS             | Status  |
+| --------- | -------------- | ------- |
+| ubuntu_20 | Ubuntu         | Running |
+| win2019   | Windows Server | Running |
+
+Example resource configuration:
+
+| Resource | Allocation          |
+| -------- | ------------------- |
+| vCPU     | 2                   |
+| RAM      | 4 GB                |
+| Disk     | 40–60 GB            |
+| Network  | libvirt NAT network |
+
+---
+
+# Installing virt-manager
+
+virt-manager provides advanced VM management capabilities.
+
+Install:
+
+```bash
+sudo apt install virt-manager
+```
+
+Run:
+
+```bash
+virt-manager
+```
+
+virt-manager connects to libvirt to manage virtual machines.
+
+---
+
+# Remote GUI Management with MobaXterm
+
+Because the server runs headless, GUI applications are accessed remotely.
+
+MobaXterm acts as:
+
+* SSH client
+* X11 display server
+
+### Configuration
+
+1. Start MobaXterm
+2. Ensure **X Server is enabled**
+3. Create SSH session
+4. Enable **X11 forwarding**
+
+---
+
+# Verify X11 Forwarding
+
+Check display environment:
+
+```bash
+echo $DISPLAY
+```
+
+Example output:
+
+```
+localhost:10.0
+```
+
+Test graphical forwarding:
+
+```bash
+xclock
+```
+
+If the clock window appears, X11 forwarding works correctly.
+
+---
+
+# Running virt-manager Remotely
+
+Launch virt-manager from SSH:
+
+```bash
+virt-manager
+```
+
+Detected VMs:
+
+```
+QEMU/KVM
+ ├── ubuntu_20
+ └── win2019
+```
+
+---
+
+# VM Management via virt-manager
+
+virt-manager allows advanced virtualization management.
+
+Capabilities include:
+
+### VM Console Access
+
+Direct graphical access to VM.
+
+### Hardware Configuration
+
+Modify:
+
+* CPU allocation
+* RAM
+* Storage
+* Network adapters
+
+### Storage Management
+
+Attach additional disks.
+
+### Snapshot Management
+
+Create restore points before system changes.
+
+### Device Passthrough
+
+Attach host hardware devices to VMs.
+
+---
+
+# Virtual Networking
+
+List virtual networks:
+
+```bash
+virsh net-list --all
+```
+
+Example:
+
+```
+Name      State
+-------------------
+default   active
+```
+
+The default network uses **NAT mode**.
+
+Future improvements may include **bridge networking** to provide direct LAN access.
+
+---
+
+# Operational Workflow
+
+Typical workflow used in this environment:
+
+1. Connect via SSH
+2. Monitor via Cockpit
+3. Launch virt-manager for detailed configuration
+4. Manage VMs through libvirt backend
+
+This hybrid model allows both **web-based and GUI-based management**.
+
+---
+
+# Advantages of KVM
+
+KVM provides several key benefits:
+
+* Kernel-level integration with Linux
+* Near-native virtualization performance
+* Open-source with no licensing cost
+* Flexible automation support
+* Widely used in cloud infrastructure
+
+---
+
+# Future Improvements
+
+Planned enhancements include:
+
+* Bridge networking configuration
+* VirtIO performance tuning
+* Storage pool management
+* VM templates
+* Cloud-init automation
+* Monitoring integration
+
+---
+
+# Conclusion
+
+This project demonstrates a complete **KVM virtualization deployment on Ubuntu Server 22.04 LTS**.
+
+Using KVM with libvirt, Cockpit, and virt-manager creates a flexible virtualization environment suitable for:
+
+* Homelab infrastructure
+* Virtualization learning
+* Testing environments
+* Lightweight virtualization platforms
+
+---
+
+# Author
+
+**Hridoy**
+System Engineer | IT Infrastructure Enthusiast
